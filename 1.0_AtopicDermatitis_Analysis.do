@@ -44,8 +44,7 @@ gsort -CACO -YEAR
 *make case id, useful for further analyses
 gen ptid = _n
 
-
-*indicator variable to see whether diagnosed with Pemphigus (694.4), Pemphigoid (694.5), or Unspecified bullous dermatoses (694.9)
+*indicator variable to see whether diagnosed with Diaper or napkin rash (691.0), or Other atopic dermatitis and related conditions (691.8)
 gen adermcat = .
 	*identify all cases
 		replace adermcat = -1 if CACO == 1
@@ -53,14 +52,19 @@ gen adermcat = .
 		replace adermcat = 0 if	DIAG1 == "6910-" | DIAG2 == "6910-" | DIAG3 == "6910-" | DIAG4 == "6910-" | DIAG5 == "6910-"
 	*Other atopic dermatitis and related conditions (691.8)
 		replace adermcat = 8 if	DIAG1 == "6918-" | DIAG2 == "6918-" | DIAG3 == "6918-" | DIAG4 == "6918-" | DIAG5 == "6918-"
-
-*format
-label define adermcatf	-1 "Case that does not fit into any specific category"			///
-						0 "(691.0) Diaper or napkin rash"								///
-						8 "(691.8) Other atopic dermatitis and related conditions"
+	*format
+	label define adermcatf	-1 "Case that does not fit into any specific category"			///
+							 0 "(691.0) Diaper or napkin rash"								///
+							 8 "(691.8) Other atopic dermatitis and related conditions"
 label value adermcat adermcatf
 
+*look at how data is distributed among the subcategories of atopic derm
 tab adermcat
+
+*histograms showing the distributions of atopic derm by sub-disease categories
+hist AGE if CACO == 1, percent title("Any Atopic dermatitis and related conditions (691)") subtitle("n = 1,308") name("AnyADerm_age", replace)
+hist AGE if adermcat == 0, percent title("Diaper or napkin rash (691.0)") subtitle("n = 436") name("diaperRash_age", replace) 
+hist AGE if adermcat == 8, percent title("Other atopic dermatitis and related conditions (691.8)") subtitle("n = 872") name("ADerm_age", replace) 
 
 
 

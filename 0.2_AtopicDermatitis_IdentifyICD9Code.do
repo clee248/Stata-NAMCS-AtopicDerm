@@ -48,6 +48,9 @@ foreach code in `ICD9code' {
 			CEBVD CAD CHF CKD COPD CRF DEPRN DIABETES DIABTYP1 DIABTYP2 DIABTYP0			///
 			ESRD HIV HPE HTN HYPLIPID IHD OBESITY OSA OSTPRSIS SUBSTAB						///
 			NOCHRON TOTCHRON STRATM PSUM SUBFILE PROSTRAT PROVIDER
+			
+	*drop if 18 years and older
+	drop if AGE >= 18
 	
 	*save complete dataset of cases and controls, now with indicator variable
 	save namcs_2015to1995_ICD9_`code', replace
