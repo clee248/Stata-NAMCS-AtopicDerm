@@ -475,7 +475,7 @@ Make bar graphs showing frequency counts and estimates for each sociodemographic
 		
 	Note: should produce 4 plots for each SD variable
 
-*/ */
+*/
 
 *change directory to folder where graphs will be saved
 cd "`output_fig'"
@@ -532,14 +532,27 @@ foreach dvar in `sociodem_gph' {
 }
 
 
-/*Sheet 5: Figure 1 - Visits Year
+*Sheet 4: Figure 1 - Visits Year
 **Total estimated patient visits per year from 1995 to 2015**
 *See Figure 1 (Davis 2015)
 
 *data to be used to make a line plot in excel
 
+*all Atopic dermatitis (691)
 
-*all Bullous dermatoses
+	*check n to ensure looking at correct group
+	tab CACO_691 if CACO_691 == 1
+	
+	*check number of observations per year...make sure ≥ 30 to be reliable
+	bysort YEAR:	sum PATWT if CACO_691 == 1
+
+	*estimates and 95% CL per year
+	total PATWT if CACO_691 == 1, over(YEAR)
+
+*(691.8) Other atopic dermatitis and related conditions
+
+	*check n to ensure looking at correct group
+	tab CACO if CACO == 1
 
 	*check number of observations per year...make sure ≥ 30 to be reliable
 	bysort YEAR:	sum PATWT if CACO == 1
@@ -547,30 +560,17 @@ foreach dvar in `sociodem_gph' {
 	*estimates and 95% CL per year
 	total PATWT if CACO == 1, over(YEAR)
 
-*(694.5) Pemphigoid
+*(691.0) Diaper or napkin rash
+
+	*check n to ensure looking at correct group
+	tab CACO if adermcat == 0
 
 	*check number of observations per year...make sure ≥ 30 to be reliable
-	bysort YEAR:	sum PATWT if pemphcatcol == 1
+	bysort YEAR:	sum PATWT if adermcat == 0
 
 	*estimates and 95% CL per year
-	total PATWT if pemphcatcol == 1, over(YEAR)
-
-*(694.4) Pemphigus
-
-	*check number of observations per year...make sure ≥ 30 to be reliable
-	bysort YEAR:	sum PATWT if pemphcatcol == 2
-
-	*estimates and 95% CL per year
-	total PATWT if pemphcatcol == 2, over(YEAR)
-
-*Other or Unspecified bullous dermatoses
-
-	*check number of observations per year...make sure ≥ 30 to be reliable
-	bysort YEAR:	sum PATWT if pemphcatcol == 3
-
-	*estimates and 95% CL per year
-	total PATWT if pemphcatcol == 3, over(YEAR)
-
+	total PATWT if adermcat == 0, over(YEAR)
+*/
 
 *Sheet 6: Meds Table
 **Most common meds prescribed from 1995 to 2015**
@@ -616,10 +616,10 @@ tab s_MED if diag1_694_other == 1, sort
 
 
 *save long dataset
-save "namcs_2015to1995_6918_anal_LongMeds.dta", replace
+*save "namcs_2015to1995_6918_anal_LongMeds.dta", replace
 
 
-*Sheet 7: Comorbidities Table
+/*Sheet 7: Comorbidities Table
 **Most common comorbidities from 1995 to 2015**
 
 /* 
