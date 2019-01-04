@@ -386,7 +386,7 @@ save "namcs_2015to1995_6918_anal_CasesOnly.dta", replace
 End of Data processing
 */
 
-*reload the entire dataset with formatted variables for further analysis
+/*reload the entire dataset with formatted variables for further analysis
 cd "`output_dat'"
 use "namcs_2015to1995_6918_anal.dta
 
@@ -410,7 +410,7 @@ local sociodem  	sex agecat race insur region setting practice specDerm spec2
 local sociodem_gph  sex agecat racegph insur region setting practice specDerm spec2
 
 
-/*Sheet 1: Case Category - all atopic derm (691) by specific disease categories
+*Sheet 1: Case Category - all atopic derm (691) by specific disease categories
 tab adermcat
 
 
@@ -577,46 +577,126 @@ foreach dvar in `sociodem_gph' {
 
 /* 
 reshape medications prescribed data from wide to long 
-https://stats.idre.ucla.edu/stata/modules/reshaping-data-wide-to-long/
+Wide to Long:	https://stats.idre.ucla.edu/stata/modules/reshaping-data-wide-to-long/
+Long to Wide:	https://stats.idre.ucla.edu/stata/modules/reshaping-data-long-to-wide/
 */
 
 *load analytical wide dataset
 cd "`output_dat'"
 use "namcs_2015to1995_6918_anal_CasesOnly.dta", clear
+total  PATWT
 
-*reshape to long data
+*generate indicator variable for (691.8) Other atopic dermatitis and related conditions 	
+
+	*ANY:	691.8 in any of the 5 diagnosis positions
+	gen diag_6918_Any5 = . 
+	replace diag_6918_Any5 = 1 if DIAG1 == "6918-" | DIAG2 == "6918-" | DIAG3 == "6918-" | DIAG4 == "6918-" | DIAG5 == "6918-"
+	*check to see how many have any
+	tab diag_6918_Any5
+
+	*ONLY:	691.8 in first diagnosis position only
+	gen diag_6918_Only1 = .
+	replace diag_6918_Only1 = 1 if DIAG1 == "6918-" & DIAG2 == "" & DIAG3 == "" & DIAG4 == "" & DIAG5 == ""
+	*check to see how many have only 1
+	tab diag_6918_Only1
+
+	
+*reshape to long data to get all medication names
 reshape long s_MED, i(ptid) j(medid) 
 
-*look at most common meds
-tab s_MED, sort
+*encode s_MED to factor (c_MED)
+*	https://www.stata.com/support/faqs/data-management/encoding-string-variable/
+encode s_MED, gen(c_MED)
+*drop string MEDS
+drop s_MED
 
-*generate indicator variable for 694 Primary diagnosis 
-*	(i.e. 694 in first diagnosis position)
-gen diag1_694 = .
-replace diag1_694 = 1 if DIAG13D == "694"
-tab s_MED if diag1_694 == 1, sort
+*move variables ptid, medid, and c_MED to beginning of dataset for easy viewing
+order ptid medid c_MED
 
-*generate indicator variable for (694.5) Pemphigoid Primary diagnosis 
-*	(i.e. 694.5 in first diagnosis position)
-gen diag1_694_5 = .
-replace diag1_694_5 = 1 if DIAG1 == "6945-"
-tab s_MED if diag1_694_5 == 1, sort
-
-*generate indicator variable for (694.4) Pemphigus Primary diagnosis 
-*	(i.e. 694.4 in first diagnosis position)
-gen diag1_694_4 = .
-replace diag1_694_4 = 1 if DIAG1 == "6944-"
-tab s_MED if diag1_694_4 == 1, sort
-
-*generate indicator variable for Other or Unspecified bullous dermatoses Primary diagnosis 
-*	(i.e. 6940- 6943- 69460 69461 6948- 6949- in first diagnosis position)
-gen diag1_694_other = .
-replace diag1_694_other = 1 if DIAG1 == "6940-" | DIAG1 == "6943-" | DIAG1 == "69460" | DIAG1 == "69461" | DIAG1 == "6948-" | DIAG1 == "6949-"
-tab s_MED if diag1_694_other == 1, sort
+*look at most common meds by frequency of occurrence in data (unweighted)
+tab c_MED, sort
 
 
-*save long dataset
-*save "namcs_2015to1995_6918_anal_LongMeds.dta", replace
+**make variable showing number of times drug appears in dataset
+	
+	*unique_MED indicator variable if first time drug name (c_MED) appears in data set
+	by c_MED, sort: gen uniqueMED = _n == 1
+	*count number of unique meds among cases
+	count if uniqueMED
+	
+	*countMED is number of times drug appears in data set
+	sort c_MED
+	by c_MED: gen countMED = _N
+	
+	*order for easy viewing
+	order ptid medid c_MED countMED
+
+*this lists the drug summary stats if it appears more than 20 times in NAMCS
+*	use this as a list of drug names to consider
+
+	*ANY: diagnosis in any position
+	tab c_MED if countMED > 20 & diag_6918_Any5 == 1
+	
+	*ONLY: diagnosis in first position, with no other diagnoses
+	tab c_MED if countMED > 20 & diag_6918_Only1 == 1
+
+	*use this to get variable codes of the drugs in the above list
+	*label list c_MED
+
+	*save long dataset before returning to wide
+	save "namcs_2015to1995_6918_anal_LongMeds.dta", replace
+	
+*return data to wide format
+
+	*drop any unique variables before returning to long dataset (will cause errors otherwise)
+	drop uniqueMED countMED
+	
+	*reshape to long data to get indicator variables for all possible meds
+	reshape wide c_MED, i(ptid) j(medid) 
+
+
+/*	ANY 691.8 in any diagnosis position: 
+
+ALBUTEROL (12),	AMOXICILLIN (23),	ATARAX (32),	BENADRYL (49),	CETAPHIL (77),	DESONIDE (116),
+DTAP (133),	ELIDEL (141),	ELIDEL CREAM (142),	ELOCON (144),	EPIPEN (149),	EUCERIN (156),
+HYDROCORTISONE (188),	HYDROXYZINE (191),	INFLUENZA VIRUS VACC (200),	PROTOPIC (318),	SINGULAIR (348),
+TRIAMCINOLONE (381)	TRIAMCINOLONE ACETONIDE (382),	TYLENOL (390),	WESTCORT (409),	ZYRTEC (416)
+*/
+	local medANY	12	23	32	49	77	116	133	141	142	144	149	156	188	191	200	318	348	381	382	390	409	416
+
+	*this is the denominator for total number of visits for patients diagnosed with atopic derm (691.8)
+	total PATWT if CACO == 1 & diag_6918_Any5 == 1
+
+	foreach med in `medANY' {
+
+	*get visit estimate for the top drugs
+	total  PATWT if diag_6918_Any5 == 1 &																			///
+				  inlist(`med', c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+								c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+								c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	di "	med `med'"
+	}
+
+
+/*	ONLY 691.8 in First Position:
+
+All drugs in the above ANY list, except DTAP (133)
+*/
+local medONLY	12	23	32	49	77	116		141	142	144	149	156	188	191	200	318	348	381	382	390	409	416
+
+*this is the denominator for total number of visits for patients diagnosed with atopic derm (691.8)
+total PATWT if CACO == 1 & diag_6918_Only1 == 1
+
+foreach med in `medONLY' {
+
+*get visit estimate for the top drugs
+total  PATWT if diag_6918_Only1 == 1 &																			///
+			  inlist(`med', c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+							c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+							c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+di "	med `med'"
+}
+
 
 
 /*Sheet 7: Comorbidities Table
@@ -661,6 +741,9 @@ save "namcs_2015to1995_6918_anal_LongDiag.dta", replace
 
 /*
 Notes for running logistics in NAMCS
+
+	*what is 2-stage cluster sampling?
+	https://stats.stackexchange.com/questions/202305/stratified-cluster-and-two-stage-cluster-sampling
 
 	*preparation for survey sampled logistic regression
 	*https://stats.idre.ucla.edu/stata/faq/how-do-i-use-the-stata-survey-svy-commands/
