@@ -386,7 +386,7 @@ save "namcs_2015to1995_6918_anal_CasesOnly.dta", replace
 End of Data processing
 */
 
-/*reload the entire dataset with formatted variables for further analysis
+*reload the entire dataset with formatted variables for further analysis
 cd "`output_dat'"
 use "namcs_2015to1995_6918_anal.dta
 
@@ -410,7 +410,7 @@ local sociodem  	sex agecat race insur region setting practice specDerm spec2
 local sociodem_gph  sex agecat racegph insur region setting practice specDerm spec2
 
 
-*Sheet 1: Case Category - all atopic derm (691) by specific disease categories
+/*Sheet 1: Case Category - all atopic derm (691) by specific disease categories
 tab adermcat
 
 
@@ -570,8 +570,8 @@ foreach dvar in `sociodem_gph' {
 
 	*estimates and 95% CL per year
 	total PATWT if adermcat == 0, over(YEAR)
-*/
 
+	
 *Sheet 6: Meds Table
 **Most common meds prescribed from 1995 to 2015**
 
@@ -600,6 +600,8 @@ total  PATWT
 	*check to see how many have only 1
 	tab diag_6918_Only1
 
+	*save dataset with these indicator variables (will use in comorbidities)
+	save "namcs_2015to1995_6918_anal_CasesOnly_AnyOnly.dta", replace
 	
 *reshape to long data to get all medication names
 reshape long s_MED, i(ptid) j(medid) 
@@ -619,7 +621,7 @@ tab c_MED, sort
 
 **make variable showing number of times drug appears in dataset
 	
-	*unique_MED indicator variable if first time drug name (c_MED) appears in data set
+	*uniqueMED indicator variable if first time drug name (c_MED) appears in data set
 	by c_MED, sort: gen uniqueMED = _n == 1
 	*count number of unique meds among cases
 	count if uniqueMED
@@ -631,14 +633,14 @@ tab c_MED, sort
 	*order for easy viewing
 	order ptid medid c_MED countMED
 
-*this lists the drug summary stats if it appears more than 20 times in NAMCS
+*this lists summary stats for drugs that appear 20 times or more in NAMCS
 *	use this as a list of drug names to consider
 
 	*ANY: diagnosis in any position
-	tab c_MED if countMED > 20 & diag_6918_Any5 == 1
+	tab c_MED if countMED >= 20 & diag_6918_Any5 == 1
 	
 	*ONLY: diagnosis in first position, with no other diagnoses
-	tab c_MED if countMED > 20 & diag_6918_Only1 == 1
+	tab c_MED if countMED >= 20 & diag_6918_Only1 == 1
 
 	*use this to get variable codes of the drugs in the above list
 	*label list c_MED
@@ -656,12 +658,14 @@ tab c_MED, sort
 
 
 /*	ANY 691.8 in any diagnosis position: 
-
-ALBUTEROL (12),	AMOXICILLIN (23),	ATARAX (32),	BENADRYL (49),	CETAPHIL (77),	DESONIDE (116),
-DTAP (133),	ELIDEL (141),	ELIDEL CREAM (142),	ELOCON (144),	EPIPEN (149),	EUCERIN (156),
-HYDROCORTISONE (188),	HYDROXYZINE (191),	INFLUENZA VIRUS VACC (200),	PROTOPIC (318),	SINGULAIR (348),
-TRIAMCINOLONE (381)	TRIAMCINOLONE ACETONIDE (382),	TYLENOL (390),	WESTCORT (409),	ZYRTEC (416)
+	ALBUTEROL (12)			AMOXICILLIN (23)		ATARAX (32)						BENADRYL (49)
+	CETAPHIL (77)			DESONIDE (116)			DTAP (133)						ELIDEL (141)
+	ELIDEL CREAM (142)		ELOCON (144)			EPIPEN (149)					EUCERIN (156)
+	HYDROCORTISONE (188)	HYDROXYZINE (191)		INFLUENZA VIRUS VACC (200)		PROTOPIC (318)
+	SINGULAIR (348)			TRIAMCINOLONE (381)		TRIAMCINOLONE ACETONIDE (382)	TYLENOL (390)
+	WESTCORT (409)			ZYRTEC (416)
 */
+	*local macro containing all of the above drugs
 	local medANY	12	23	32	49	77	116	133	141	142	144	149	156	188	191	200	318	348	381	382	390	409	416
 
 	*this is the denominator for total number of visits for patients diagnosed with atopic derm (691.8)
@@ -699,7 +703,7 @@ di "	med `med'"
 
 
 
-/*Sheet 7: Comorbidities Table
+*Sheet 7: Comorbidities Table
 **Most common comorbidities from 1995 to 2015**
 
 /* 
@@ -709,35 +713,93 @@ https://stats.idre.ucla.edu/stata/modules/reshaping-data-wide-to-long/
 
 *load original wide dataset
 cd "`output_dat'"
-use "namcs_2015to1995_6918_anal_CasesOnly.dta", clear
+use "namcs_2015to1995_6918_anal_CasesOnly_AnyOnly.dta", clear
 
-*reshape to long data
+*drop the 3-digit diagnosis codes because they're less specific and redundant
+drop DIAG13D DIAG23D DIAG33D DIAG43D DIAG53D
+
+*reshape to long data to get all diagnoses names
 reshape long DIAG, i(ptid) j(dxid) 
 
-*look at most common comorbidities: 
-*	(1) IGNORE any pemphigus diagnoses, 
-*	(2) IGNORE any comorbidities that have less than 2 observations
-*all Bullous dermatoses
-tab DIAG if CACO == 1, sort
+*there are blank diagnosis codes as 00000 for years 2006 and before
+tab YEAR if DIAG == "00000"
+	*replace them as missing
+	replace DIAG = "" if DIAG == "00000"
 
-*(694.5) Pemphigoid
-tab DIAG if pemphcatcol == 1, sort
+*encode DIAG to factor (c_DIAG)
+*	https://www.stata.com/support/faqs/data-management/encoding-string-variable/
+encode DIAG, gen(c_DIAG)
+*drop string DIAG
+drop DIAG
 
-*(694.4) Pemphigus
-tab DIAG if pemphcatcol == 2, sort
+*move variables ptid, medid, and c_DIAG to beginning of dataset for easy viewing
+order ptid dxid c_DIAG
 
-*Other or Unspecified bullous dermatoses
-tab DIAG if pemphcatcol == 3, sort
+*look at most common meds by frequency of occurrence in data (unweighted)
+tab c_DIAG, sort
 
+**make variable showing number of times diagnosis appears in dataset
+	
+	*uniqueDIAG indicator variable if first time diagnosis code (c_DIAG) appears in data set
+	by c_DIAG, sort: gen uniqueDIAG = _n == 1
+	*count number of unique diagnosis among cases
+	count if uniqueDIAG
+	
+	*countDIAG is number of times diagnosis appears in data set
+	sort c_DIAG
+	by c_DIAG: gen countDIAG = _N
+	
+	*order for easy viewing
+	order ptid dxid c_DIAG countDIAG
 
-*save long dataset
-save "namcs_2015to1995_6918_anal_LongDiag.dta", replace
+*this lists summary stats for diagnoses that appears 10 times or more in NAMCS
+*	use this as a list of drug names to consider
 
+	*This is the percentage of diagnoses that were for 691.8 only
+	tab c_DIAG if diag_6918_Only1 == 1
 
+	*ANY: diagnosis in any position
+	tab c_DIAG if countDIAG >= 10 & diag_6918_Any5 == 1
+	
+	*use this to get variable codes of the drugs in the above list
+	*label list c_DIAG
 
+	*save long dataset before returning to wide
+	save "namcs_2015to1995_6918_anal_LongDiag.dta", replace
+
+*return data to wide format
+
+	*drop any unique variables before returning to long dataset (will cause errors otherwise)
+	drop uniqueDIAG countDIAG
+	
+	*reshape to long data to get indicator variables for all possible meds
+	reshape wide c_DIAG, i(ptid) j(dxid) 
+
+/*	ANY 691.8 in any diagnosis position: 
+	0780- (8)		3829- (59)		4659- (69)		4720- (71)		4770- (74)		4779- (77)	
+	49300 (83)		49390 (89)		684-- (112)		6918-  (120)	6929- (125)		6931- (126)	
+	7061- (142)		7862- (184)		9957- (200)		V202- (219)		V6759 (226)
+*/
+	*local macro containing all of the above drugs
+	local diagANY	8	59	69	71	74	77	83	89	112	120	125	126	142	184	200	219	226
+
+	*this is the denominator for total number of visits for patients diagnosed with atopic derm (691.8)
+	total PATWT if CACO == 1 & diag_6918_Any5 == 1
+	
+	*This is the percentage of diagnoses that were for 691.8 only
+	total PATWT if diag_6918_Only1 == 1
+
+	foreach diag in `diagANY' {
+
+	*get visit estimate for the top drugs
+	total  PATWT if diag_6918_Any5 == 1 &																			///
+				  inlist(`diag', c_DIAG1,	c_DIAG2, c_DIAG3, c_DIAG4, c_DIAG5)
+	di "	diag `diag'"
+	}
+*/
+
+	
 *Sheet 8: Table 2 - SD ORs
-**The code is here, but these ORs are not reliable due to data sparsity
-**They will not be reported in the analysis
 
 /*
 Notes for running logistics in NAMCS
@@ -758,20 +820,35 @@ Notes for running logistics in NAMCS
 cd "`output_dat'"
 use "namcs_2015to1995_6918_anal.dta", clear
 
-*make outcome variable specific to pemphigoid
-gen CACO_6945 = .
-replace CACO_6945 = 1 if pemphcatcol == 1
-replace CACO_6945 = 0 if pemphcatcol != 1
-		
+/*	this macro is up above, just after the data processing step, right before "Sheet 1"
+
+local sociodem  	sex 
+*	agecat race insur region setting practice specDerm spec2
+
+*/
+
+
 *preparation for survey sampled logistic regression
 svyset CPSUM [pweight=PATWT], strata(CSTRATM)
 
 foreach univar in `sociodem' {
 
+	*look at CACO by sociodemographic variable
+	tab CACO `univar'
+	
 	*actually run the regression
-	svy: logistic CACO_6945 i.`univar'
+	svy: logistic CACO i.`univar'
 }
 
 *how to see where the errors are from
 *	https://www.statalist.org/forums/forum/general-stata-discussion/general/1375170-survey-analysis-error-with-single-stratum
 *svydes
+
+
+/*	
+
+Note: 1/11/19
+
+There's so many singleton strata now because restricting to only children < 18 years old!
+I'm not sure how to fix it for now, but will not be able to do logistic regression without figuring this out :/
+*/
