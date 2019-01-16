@@ -820,35 +820,41 @@ Notes for running logistics in NAMCS
 cd "`output_dat'"
 use "namcs_2015to1995_6918_anal.dta", clear
 
-/*	this macro is up above, just after the data processing step, right before "Sheet 1"
+*	this macro is up above, just after the data processing step, right before "Sheet 1"
 
-local sociodem  	sex 
-*	agecat race insur region setting practice specDerm spec2
-
-*/
+local sociodem		sex agecat race insur region setting practice specDerm
 
 
 *preparation for survey sampled logistic regression
-svyset CPSUM [pweight=PATWT], strata(CSTRATM)
+*	redistribute singletons to other years using the "singleunit(centered)"
+*	 https://stats.stackexchange.com/questions/120772/dealing-with-singleton-strata-in-survey-analysis
+svyset CPSUM [pweight=PATWT], strata(CSTRATM) singleunit(centered)
 
 foreach univar in `sociodem' {
 
 	*look at CACO by sociodemographic variable
 	tab CACO `univar'
 	
-	*actually run the regression
-	svy: logistic CACO i.`univar'
 }
+
+*actually run the regression, with appropriate reference groups
+svy: logistic CACO i.sex
+svy: logistic CACO ib4.agecat
+svy: logistic CACO ib4.race
+svy: logistic CACO ib3.insur
+svy: logistic CACO ib2.region
+svy: logistic CACO ib1.setting
+svy: logistic CACO ib1.practice
+svy: logistic CACO ib1.specDerm
+
+*look at all other sociodemographic variabels after adjusting for sex and age
+svy: logistic CACO sex AGE ib4.race
+svy: logistic CACO sex AGE ib3.insur
+svy: logistic CACO sex AGE ib2.region
+svy: logistic CACO sex AGE ib1.setting
+svy: logistic CACO sex AGE ib1.practice
+svy: logistic CACO sex AGE ib1.specDerm
 
 *how to see where the errors are from
 *	https://www.statalist.org/forums/forum/general-stata-discussion/general/1375170-survey-analysis-error-with-single-stratum
 *svydes
-
-
-/*	
-
-Note: 1/11/19
-
-There's so many singleton strata now because restricting to only children < 18 years old!
-I'm not sure how to fix it for now, but will not be able to do logistic regression without figuring this out :/
-*/
