@@ -532,6 +532,7 @@ foreach dvar in `sociodem_gph' {
 }
 
 
+
 *Sheet 4: Figure 1 - Visits Year
 **Total estimated patient visits per year from 1995 to 2015**
 *See Figure 1 (Davis 2015)
@@ -570,6 +571,8 @@ foreach dvar in `sociodem_gph' {
 
 	*estimates and 95% CL per year
 	total PATWT if adermcat == 0, over(YEAR)
+
+*/
 
 	
 *Sheet 6: Meds Table
@@ -702,8 +705,163 @@ di "	med `med'"
 }
 
 
+/* 	Recategorize drugs that had multiple names after speaking with dermatologists:
+	
+	– Prescription drugs:
+		Amoxicillin (23)	Hydroxyzine (32, 191)	Desonide (116)	Pimecrolimus (141, 142)
+		Mometasone furoate (144)	Tacrolimus (318)	Triamcinalone (381, 382)
+	
+	– Over the counter drugs:
+		Cetaphil (77)	Eucerin (156)	Hydrocortisone (188, 409)	Certirizine (416)
 
-*Sheet 7: Comorbidities Table
+*/
+
+* prescription drug indicator variables
+
+	gen				drugRx1 = .
+	replace 		drugRx1 = 1 if inlist(23, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugRx1f	1 "Amoxicillin"
+	label value 	drugRx1 drugRx1f
+	label variable drugRx1 "Amoxicillin"
+
+	gen				drugRx2 = .
+	replace 		drugRx2 = 1 if inlist(32, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	replace 		drugRx2 = 1 if inlist(191, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugRx2f	1 "Hydroxyzine"
+	label value 	drugRx2 drugRx2f
+	label variable drugRx2 "Hydroxyzine"
+
+
+	gen				drugRx3 = .
+	replace 		drugRx3 = 1 if inlist(116, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugRx3f	1 "Desonide"
+	label value 	drugRx3 drugRx3f
+	label variable drugRx3 "Desonide"
+
+
+	gen				drugRx4 = .
+	replace 		drugRx4 = 1 if inlist(141, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	replace 		drugRx4 = 1 if inlist(142, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugRx4f	1 "Pimecrolimus"
+	label value 	drugRx4 drugRx4f
+	label variable drugRx4 "Pimecrolimus"
+
+
+	gen				drugRx5 = .
+	replace 		drugRx5 = 1 if inlist(144, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugRx5f	1 "Mometasone furoate"
+	label value 	drugRx5 drugRx5f
+	label variable drugRx5 "Mometasone furoate"
+
+
+	gen				drugRx6 = .
+	replace 		drugRx6 = 1 if inlist(318, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugRx6f	1 "Tacrolimus"
+	label value 	drugRx6 drugRx6f
+	label variable drugRx6 "Tacrolimus"
+
+
+	gen				drugRx7 = .
+	replace 		drugRx7 = 1 if inlist(381, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	replace 		drugRx7 = 1 if inlist(382, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugRx7f	1 "Triamcinolone"
+	label value 	drugRx7 drugRx7f
+	label variable drugRx7 "Triamcinolone"
+
+*macro of all prescription drug variables
+local drugPres drugRx1 drugRx2 drugRx3 drugRx4 drugRx5 drugRx6 drugRx7
+
+foreach drug in `drugPres' {
+
+	* Rx drugs for ANY atopic dermatitis
+	tab `drug' if diag_6918_Any5 == 1
+	total  PATWT if diag_6918_Any5 == 1 & `drug' == 1
+
+	* Rx drugs for ONLY atopic dermatitis
+	tab `drug' if diag_6918_Only1 == 1
+	total  PATWT if diag_6918_Only1 == 1 & `drug' == 1
+
+}
+
+
+* over the counter drug indicator variables
+
+	gen				drugOTC1 = .
+	replace 		drugOTC1 = 1 if inlist(77, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugOTC1f	1 "Cetaphil"
+	label value 	drugOTC1 drugOTC1f
+	label variable 	drugOTC1 "Cetaphil"
+
+	gen				drugOTC2 = .
+	replace 		drugOTC2 = 1 if inlist(156, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugOTC2f	1 "Eucerin"
+	label value 	drugOTC2 drugOTC2f
+	label variable 	drugOTC2 "Eucerin"
+
+
+	gen				drugOTC3 = .
+	replace 		drugOTC3 = 1 if inlist(188, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	replace 		drugOTC3 = 1 if inlist(409, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugOTC3f	1 "Hydrocortisone"
+	label value 	drugOTC3 drugOTC3f
+	label variable 	drugOTC3 "Hydrocortisone"
+
+
+	gen				drugOTC4 = .
+	replace 		drugOTC4 = 1 if inlist(416, 	c_MED1,	c_MED2, c_MED3, c_MED4, c_MED5, c_MED6, c_MED7, c_MED8, c_MED9, c_MED10,	///
+												c_MED11,c_MED12,c_MED13,c_MED14,c_MED15,c_MED16,c_MED17,c_MED18,c_MED19,c_MED20,	///
+												c_MED20,c_MED21,c_MED23,c_MED24,c_MED25,c_MED26,c_MED27,c_MED28,c_MED29,c_MED30)
+	label define 	drugOTC4f	1 "Cetirizine"
+	label value 	drugOTC4 drugOTC4f
+	label variable 	drugOTC4 "Cetirizine"
+
+
+*macro of all prescription drug variables
+local drugOver drugOTC1 drugOTC2 drugOTC3 drugOTC4
+
+foreach drug in `drugOver' {
+
+	* Rx drugs for ANY atopic dermatitis
+	tab `drug' if diag_6918_Any5 == 1
+	total  PATWT if diag_6918_Any5 == 1 & `drug' == 1
+
+	* Rx drugs for ONLY atopic dermatitis
+	tab `drug' if diag_6918_Only1 == 1
+	total  PATWT if diag_6918_Only1 == 1 & `drug' == 1
+
+}
+
+
+
+/*Sheet 7: Comorbidities Table
 **Most common comorbidities from 1995 to 2015**
 
 /* 
@@ -796,8 +954,8 @@ tab c_DIAG, sort
 				  inlist(`diag', c_DIAG1,	c_DIAG2, c_DIAG3, c_DIAG4, c_DIAG5)
 	di "	diag `diag'"
 	}
-*/
 
+	
 	
 *Sheet 8: Table 2 - SD ORs
 
