@@ -531,6 +531,7 @@ foreach dvar in `sociodem_gph' {
 
 }
 
+*/
 
 
 *Sheet 4: Figure 1 - Visits Year
@@ -572,10 +573,72 @@ foreach dvar in `sociodem_gph' {
 	*estimates and 95% CL per year
 	total PATWT if adermcat == 0, over(YEAR)
 
+	
+/*
+AB 20190122 
+
+	"Horii also compared the number of visits per year and found the increase to be significant (used odds ratio)"
+
+	See "Sheet 8" below for discussion on logistic regression in Two-Stage Cluster Sampling	
 */
 
+svyset CPSUM [pweight=PATWT], strata(CSTRATM) singleunit(centered)
+svy: logistic CACO sex AGE YEAR
+
+
+/*
+AB 20190122 
+
+	"Horii compared demographics against the year groupings to see if any one demographic 
+	was significantly associated with the increase in number of visits"
+*/
+
+	* categorize YEAR into 5 year blocks
 	
-*Sheet 6: Meds Table
+		gen year5Cat = .
+		replace year5Cat = 4 if YEAR <= 2015
+		replace year5Cat = 3 if YEAR <= 2010
+		replace year5Cat = 2 if YEAR <= 2005
+		replace year5Cat = 1 if YEAR <= 2000
+			label define year5Catf	4 "2011-2015"		///
+									3 "2006-2010"		///
+									2 "2001-2004"		///
+									1 "1995-2000"
+			label value year5Cat year5Catf
+			label variable year5Cat "Year Categorized"
+
+	*run regression assessing interaction with year5Cat
+
+		*ixn of YEAR (as continuous measure) with age and sex, respectively
+		svy: logistic CACO sex c.YEAR c.AGE c.YEAR#c.AGE
+		svy: logistic CACO sex c.YEAR c.AGE c.YEAR#sex
+
+		*ixn with agecat
+		svy: logistic CACO sex i.agecat i.year5Cat i.year5Cat#i.agecat
+		
+		*ixn with sex
+		svy: logistic CACO sex AGE i.year5Cat i.year5Cat#sex
+
+		*assess all sociodemographics, while adjusting for sex and age
+		local sociodem  	race insur region setting practice specDerm
+		foreach var in `sociodem' {
+			svy: logistic CACO sex AGE i.year5Cat i.`var' i.year5Cat#i.`var'
+		}
+		
+/*
+DG 20190123
+
+	This above is all very nice, but is starting to feel like a fishing expedition.
+	Start over and do a proper analysis for logistic regression:
+		- Univariate
+		- Multivariate with all significant univariate variables
+		– Assess confounding of all significant main effects variables
+		- Assess interactions
+	Look at notes from 511b for details	on methods
+*/
+		
+
+/*Sheet 6: Meds Table
 **Most common meds prescribed from 1995 to 2015**
 
 /* 
@@ -861,7 +924,7 @@ foreach drug in `drugOver' {
 
 
 
-/*Sheet 7: Comorbidities Table
+*Sheet 7: Comorbidities Table
 **Most common comorbidities from 1995 to 2015**
 
 /* 
@@ -966,8 +1029,12 @@ Notes for running logistics in NAMCS
 	https://stats.stackexchange.com/questions/202305/stratified-cluster-and-two-stage-cluster-sampling
 
 	*preparation for survey sampled logistic regression
-	*https://stats.idre.ucla.edu/stata/faq/how-do-i-use-the-stata-survey-svy-commands/
-	svyset CPSUM [pweight=poolwt], strata(CSTRATM)
+	*	https://stats.idre.ucla.edu/stata/faq/how-do-i-use-the-stata-survey-svy-commands/
+	
+	*redistribute singletons to other years using the "singleunit(centered)"
+	*	https://stats.stackexchange.com/questions/120772/dealing-with-singleton-strata-in-survey-analysis
+
+	svyset CPSUM [pweight=PATWT], strata(CSTRATM) singleunit(centered)
 
 	*actually run the regression
 	svy: logistic y x1 x2 x3
@@ -984,8 +1051,6 @@ local sociodem		sex agecat race insur region setting practice specDerm
 
 
 *preparation for survey sampled logistic regression
-*	redistribute singletons to other years using the "singleunit(centered)"
-*	 https://stats.stackexchange.com/questions/120772/dealing-with-singleton-strata-in-survey-analysis
 svyset CPSUM [pweight=PATWT], strata(CSTRATM) singleunit(centered)
 
 foreach univar in `sociodem' {
